@@ -16,5 +16,13 @@ end
 
 ---Returns true if the state was changed.
 function stateChanged(state_machine_name)
-    return (SM_states.last[state_machine_name] ~= SM_states.current[state_machine_name])
+    local currentState = SM_states.current[state_machine_name]
+    local lastState = SM_states.last[state_machine_name]
+
+    local stateChanged = (lastState ~= currentState)
+    -- [If you want to trigger something when the state changed, un comment the code bellow] --
+    -- if stateChanged then
+    --     
+    -- end
+    return stateChanged
 end

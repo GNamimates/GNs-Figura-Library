@@ -19,7 +19,7 @@
 ---`    position = result.position`  
 ---`    velocity = result.velocity`  
 ---`end`  
-function simulate(position,velocity,gravity,friction)
+function simulate(position,velocity,gravity,friction,bouncyness)
     lastPosition = position
     local isColliding = false
     local SurfaceNormal = nil

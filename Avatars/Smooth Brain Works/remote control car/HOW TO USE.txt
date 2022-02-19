@@ -1,0 +1,5 @@
+throttle -- : U
+reverse --- : J
+steer left  : H
+steer right : K
+other stuff like camera car mode or player follow are in the action wheel

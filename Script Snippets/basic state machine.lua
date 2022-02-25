@@ -2,7 +2,7 @@ SM_states = {current={},last={}}
 
 ---Declares the state machine and sets the state machine
 function setState(state_machine_name,state_value)
-    if SM_states.last[state_machine_name] ~= SM_states.current[state_machine_name] then
+    if SM_states.last[state_machine_name] ~= SM_states.current[state_machine_name] or SM_states.last[state_machine_name] == nil then
         SM_states.last[state_machine_name] = SM_states.current[state_machine_name]
         SM_states.current[state_machine_name] = state_value
     end

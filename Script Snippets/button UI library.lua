@@ -1,8 +1,23 @@
 --UI button library by GNamimates
 --green is good
---v0.3
+--v0.4
+
+--[[
+======= CHANGELOG =======
+* added `settings`
+* added show button area in settings (very helpful for finding buttons)
+]]
+
+
+
+settings = {
+    showButtonAreas = true
+}
+
 function isMouseInsideRect(x,y,width,height,anchorX,anchorY)
     local mousePos = ((client.getMousePos()+client.getWindowSize()*vectors.of{-anchorX,-anchorY})/client.getScaleFactor())
+    --model.HUD.clearAllRenderTasks()
+    --model.HUD.addRenderTask("BLOCK","area","minecraft:red_stained_glass",true,mousePos/2.5,{},{1,1})
     if x < mousePos.x and x+width >= mousePos.x and y < mousePos.y and y+height >= mousePos.y then
         return true
     end
@@ -23,19 +38,18 @@ buttonConfig = {
     }
 }
 
-function button.new(button_name,model_path,x,y,width,height,anchorX,anchorY)
+function button.new(button_name,model_path)
     if not buttonElements[button_name] then
         buttonElements[button_name] = {
             model=model_path,
-            area={x,y,width,height,anchorX,anchorY},
+            groupRoot=nil, --if this object is disabled, so will the button
+            area=nil,
             wasPressed=false,
             isPressed=false,
             hovering=false,
             pressed_function=nil,--function
             released_function=nil,--function
-            metadata={
-                id=0
-            }
+            metadata={id=0,lastArea=nil},
         }
         local nameLen = string.len(tostring(buttonElements[button_name].model.getName()))
         buttonElements[button_name].metadata.id = string.sub((tostring(buttonElements[button_name].model.getName())),nameLen,nameLen)
@@ -74,6 +88,14 @@ function tick()
                 c.model[buttonConfig.button_layout.idle..c.metadata.id].setEnabled(true)
             end
             c.wasPressed = c.isPressed
+
+            if c.metadata.lastArea ~= c.area then
+                if settings.showButtonAreas and type(c.area) ~= "nil" then
+                    c.model.clearAllRenderTasks()
+                    c.model.addRenderTask("BLOCK","area","minecraft:red_stained_glass",true,{c.area[1]/2.5,c.area[2]/2.5,0},{},{c.area[3]/40,(-c.area[4]/40),1})
+                end
+            end
+            c.metadata.lastArea = c.area
         end
     end
 end

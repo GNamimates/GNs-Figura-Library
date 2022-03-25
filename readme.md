@@ -5,4 +5,6 @@
 - Its really fun to do scripting, so my goal is to make more people how awesome coding is.
   
 ### feel free to tinker, download or modify my stuff, as long as you dont take my work as yours.
-- I am against ownership stealing, but I am in favor of Inspiration.
+- I am against ownership stealing, but I am in favor of Inspiration
+
+### almost all these scripts are made for 0.0.8 figura pre-write

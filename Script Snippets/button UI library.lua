@@ -53,20 +53,21 @@ function button.new(button_name,model_path)
             wasPressed=false,
             isPressed=false,
             hovering=false,
+            disabled=false,
             pressed_function=nil,--function
             released_function=nil,--function
-            metadata={id=0,lastArea=nil},
+            dynamicValues={id=0,lastArea=nil},
         }
         local nameLen = string.len(tostring(buttonElements[button_name].model.getName()))
-        buttonElements[button_name].metadata.id = string.sub((tostring(buttonElements[button_name].model.getName())),nameLen,nameLen)
-        if not buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].metadata.id] then
+        buttonElements[button_name].dynamicValues.id = string.sub((tostring(buttonElements[button_name].model.getName())),nameLen,nameLen)
+        if not buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].dynamicValues.id] then
             error('button: "'..button_name..'" dosent have :"'..buttonConfig.button_layout.pressed..'#" as a children')
         end
-        if not buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].metadata.id] then
+        if not buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].dynamicValues.id] then
             error('button: "'..button_name..'" dosent have :"'..buttonConfig.button_layout.idle..'#" as a children')
         end
-        buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].metadata.id].setEnabled(false)
-        buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].metadata.id].setEnabled(true)
+        buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].dynamicValues.id].setEnabled(false)
+        buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].dynamicValues.id].setEnabled(true)
         return buttonElements[button_name]
     else
         error('button"'..button_name..'" already exists!')
@@ -84,45 +85,47 @@ end
 
 function tick()
     for name, c in pairs(buttonElements) do
-        if type(c.groupRoot) ~= "nil" then
-            if not c.groupRoot.getEnabled() then
-                return
+        if not c.disabled then
+            if type(c.groupRoot) ~= "nil" then
+                if not c.groupRoot.getEnabled() then
+                    return
+                end
             end
-        end
-        c.hovering = isMouseInsideRect(c.area[1],c.area[2],c.area[3],c.area[4],c.area[5],c.area[6])
-        c.isPressed = c.hovering and primary.isPressed()
-        if  c.isPressed and not c.wasPressed then
-            if c.pressed_function ~= nil then
-                c.pressed_function()
+            c.hovering = isMouseInsideRect(c.area[1],c.area[2],c.area[3],c.area[4],c.area[5],c.area[6])
+            c.isPressed = c.hovering and primary.isPressed()
+            if  c.isPressed and not c.wasPressed then
+                if c.pressed_function ~= nil then
+                    c.pressed_function()
+                end
+                c.model[buttonConfig.button_layout.pressed..c.dynamicValues.id].setEnabled(true)
+                c.model[buttonConfig.button_layout.idle..c.dynamicValues.id].setEnabled(false)
             end
-            c.model[buttonConfig.button_layout.pressed..c.metadata.id].setEnabled(true)
-            c.model[buttonConfig.button_layout.idle..c.metadata.id].setEnabled(false)
-        end
-        if not c.isPressed and c.wasPressed then
-            if c.released_function ~= nil  then
-                c.released_function()
+            if not c.isPressed and c.wasPressed then
+                if c.released_function ~= nil  then
+                    c.released_function()
+                end
+                c.model[buttonConfig.button_layout.pressed..c.dynamicValues.id].setEnabled(false)
+                c.model[buttonConfig.button_layout.idle..c.dynamicValues.id].setEnabled(true)
             end
-            c.model[buttonConfig.button_layout.pressed..c.metadata.id].setEnabled(false)
-            c.model[buttonConfig.button_layout.idle..c.metadata.id].setEnabled(true)
-        end
-        c.wasPressed = c.isPressed
-
-        if settings.showButtonAreas and type(c.area) ~= "nil" then
-            local result = ((vectors.of{c.area[1],c.area[2]}*4-vectors.of{0,c.area[4]*-4}+client.getWindowSize()*vectors.of{c.area[5]*2-1,c.area[6]*2-1})/client.getScaleFactor())
-            result = result / 5
-            if not model.HUD_DEBUG.getRenderTask(name) then
-                model.HUD_DEBUG.addRenderTask("BLOCK",name,"minecraft:red_stained_glass",true,{
-                    result.x,
-                    result.y,0
-                },{},
-                {c.area[3]/40,c.area[4]/40,1})
-            else
-                model.HUD_DEBUG.getRenderTask(name).setPos{
-                    result.x,
-                    result.y,0
-                }
+            c.wasPressed = c.isPressed
+    
+            if settings.showButtonAreas and type(c.area) ~= "nil" then
+                local result = ((vectors.of{c.area[1],c.area[2]}*4-vectors.of{0,c.area[4]*-4}+client.getWindowSize()*vectors.of{c.area[5]*2-1,c.area[6]*2-1})/client.getScaleFactor())
+                result = result / 5
+                if not model.HUD_DEBUG.getRenderTask(name) then
+                    model.HUD_DEBUG.addRenderTask("BLOCK",name,"minecraft:red_stained_glass",true,{
+                        result.x,
+                        result.y,0
+                    },{},
+                    {c.area[3]/40,c.area[4]/40,1})
+                else
+                    model.HUD_DEBUG.getRenderTask(name).setPos{
+                        result.x,
+                        result.y,0
+                    }
+                end
+                c.dynamicValues.lastArea = c.area
             end
-            c.metadata.lastArea = c.area
         end
     end
 end

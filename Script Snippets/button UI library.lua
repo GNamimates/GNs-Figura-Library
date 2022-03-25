@@ -1,14 +1,20 @@
 --UI button library by GNamimates
 --green is good
---v0.4
+--v0.4.1
 
 --[[
 ======= CHANGELOG =======
+v0.4
 * added `settings`
 * added show button area in settings (very helpful for finding buttons)
+
+v0.4.1
+* fixed a major issue on the new show button area debug
 ]]
 
 
+
+--========================================================= [ UI ] 
 
 settings = {
     showButtonAreas = true
@@ -53,9 +59,17 @@ function button.new(button_name,model_path)
         }
         local nameLen = string.len(tostring(buttonElements[button_name].model.getName()))
         buttonElements[button_name].metadata.id = string.sub((tostring(buttonElements[button_name].model.getName())),nameLen,nameLen)
+        if not buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].metadata.id] then
+            error('button: "'..button_name..'" dosent have :"'..buttonConfig.button_layout.pressed..'#" as a children')
+        end
+        if not buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].metadata.id] then
+            error('button: "'..button_name..'" dosent have :"'..buttonConfig.button_layout.idle..'#" as a children')
+        end
         buttonElements[button_name].model[buttonConfig.button_layout.pressed..buttonElements[button_name].metadata.id].setEnabled(false)
         buttonElements[button_name].model[buttonConfig.button_layout.idle..buttonElements[button_name].metadata.id].setEnabled(true)
         return buttonElements[button_name]
+    else
+        error('button"'..button_name..'" already exists!')
     end
     return false
 end
@@ -89,11 +103,22 @@ function tick()
             end
             c.wasPressed = c.isPressed
 
-            if c.metadata.lastArea ~= c.area then
-                if settings.showButtonAreas and type(c.area) ~= "nil" then
-                    c.model.clearAllRenderTasks()
-                    c.model.addRenderTask("BLOCK","area","minecraft:red_stained_glass",true,{c.area[1]/2.5,c.area[2]/2.5,0},{},{c.area[3]/40,(-c.area[4]/40),1})
+            if settings.showButtonAreas and type(c.area) ~= "nil" then
+                local result = ((vectors.of{c.area[1],c.area[2]}*4-vectors.of{0,c.area[4]*-4}+client.getWindowSize()*vectors.of{c.area[5]*2-1,c.area[6]*2-1})/client.getScaleFactor())
+                result = result / 5
+                if not model.HUD_DEBUG.getRenderTask(name) then
+                    model.HUD_DEBUG.addRenderTask("BLOCK",name,"minecraft:red_stained_glass",true,{
+                        result.x,
+                        result.y,0
+                    },{},
+                    {c.area[3]/40,c.area[4]/40,1})
+                else
+                    model.HUD_DEBUG.getRenderTask(name).setPos{
+                        result.x,
+                        result.y,0
+                    }
                 end
+                
             end
             c.metadata.lastArea = c.area
         end

@@ -84,7 +84,7 @@ end
 
 function tick()
     for name, c in pairs(buttonElements) do
-        if c.model.getEnabled() then
+        if c.groupRoot.getEnabled() then
             c.hovering = isMouseInsideRect(c.area[1],c.area[2],c.area[3],c.area[4],c.area[5],c.area[6])
             c.isPressed = c.hovering and primary.isPressed()
             if  c.isPressed and not c.wasPressed then

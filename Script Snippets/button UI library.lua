@@ -17,7 +17,7 @@ v0.4.1
 --========================================================= [ UI ] 
 
 settings = {
-    showButtonAreas = true
+    showButtonAreas = false
 }
 
 function isMouseInsideRect(x,y,width,height,anchorX,anchorY)
@@ -112,6 +112,9 @@ function tick()
             if settings.showButtonAreas and type(c.area) ~= "nil" then
                 local result = ((vectors.of{c.area[1],c.area[2]}*4-vectors.of{0,c.area[4]*-4}+client.getWindowSize()*vectors.of{c.area[5]*2-1,c.area[6]*2-1})/client.getScaleFactor())
                 result = result / 5
+                if not model["HUD_DEBUG"] then
+                    error([[Group "HUD_DEBUG" not found]])
+                end
                 if not model.HUD_DEBUG.getRenderTask(name) then
                     model.HUD_DEBUG.addRenderTask("BLOCK",name,"minecraft:red_stained_glass",true,{
                         result.x,

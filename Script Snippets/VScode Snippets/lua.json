@@ -30,15 +30,15 @@
 		"prefix": "Figura",
 		"body": [
 			"${4:function player_init()",
-			"${1:--PLAYER INIT--}",
+			"    ${1:--PLAYER INIT--}",
 			"end}",
 			"",
 			"${5:function tick()",
-			"${2:--TICK--}",
+			"    ${2:--TICK--}",
 			"end}",
 			"",
 			"${6:function world_render()",
-			"${3:--WORLD RENDER--}",
+			"    ${3:--WORLD RENDER--}",
 			"end}"
 		]
 	},

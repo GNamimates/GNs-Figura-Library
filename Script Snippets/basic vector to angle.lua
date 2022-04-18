@@ -1,5 +1,4 @@
 -- UP IS Y
-
 function math.toAngle(pos)
     if type(pos) == "table" then pos = vectors.of(pos) end
     local y = math.atan2(pos.x,pos.z)

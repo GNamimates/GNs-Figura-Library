@@ -86,5 +86,37 @@
 			"    $13",
 			"end}"
 		]
+	},
+	"Player_Init": {
+		"prefix": "player_init",
+		"body": [
+			"function player_init()",
+			"    $1",
+			"end",
+		]
+	},
+	"tick": {
+		"prefix": "tick",
+		"body": [
+			"function tick()",
+			"    $1",
+			"end",
+		]
+	},
+	"render": {
+		"prefix": "render",
+		"body": [
+			"function render(delta)",
+			"    $1",
+			"end",
+		]
+	},
+	"world_render": {
+		"prefix": "world_render",
+		"body": [
+			"function world_render(delta)",
+			"    $1",
+			"end",
+		]
 	}
 }

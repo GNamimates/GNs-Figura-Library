@@ -1,5 +1,5 @@
 ## How To Use My VSCode Snippets
-1. simply open file explorer
+1. simply open File Explorer
 1. paste `%appdata%\Code\User` to the path
 1. create a new file called `lua.json`  
 1. and copy paste the my Snippets to `lua.json`

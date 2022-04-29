@@ -28,6 +28,7 @@
 1. none
 ```json
 "To Angle": {
+<<<<<<< HEAD
     "prefix": "toAngle",
     "body": [
         "function math.toAngle(pos)",
@@ -37,6 +38,17 @@
         "end"
     ],
     "description": "Converts a position to an angle"
+=======
+	"prefix": "toAngle",
+	"body": [
+		"function math.toAngle(pos)",
+		"    local y = math.atan2(pos.x,pos.z)",
+		"    local result = vectors.of({math.atan2((math.sin(y)*pos.x+(math.cos(y)*pos.z),pos.y),y})",
+		"    return vectors.of({math.deg(result.x),math.deg(result.y)math.deg(result.z)})",
+		"end"
+	],
+	"description": "Converts a position to an angle"
+>>>>>>> 662c89de0ba11bb38264614d0f88113ea3bca895
 },
 ```
 
@@ -46,6 +58,7 @@
 1. none
 ```json
 "Lerp Angle" : {
+<<<<<<< HEAD
         "prefix": "LerpAngle",
     "body": [
         "function lerp_angle(a, b, x)",
@@ -58,6 +71,20 @@
         "end"
     ],
     "description": "Lerp Angle"
+=======
+		"prefix": "LerpAngle",
+	"body": [
+		"function lerp_angle(a, b, x)",
+    	"    local diff = (b-a)",
+    	"    local delta = diff-(math.floor(diff/360)*360)",
+    	"    if delta > 180 then",
+    	"        delta = delta - 360",
+    	"    end",
+    	"    return a + delta * x",
+		"end"
+	],
+	"description": "Lerp Angle"
+>>>>>>> 662c89de0ba11bb38264614d0f88113ea3bca895
 },
 ```
 
@@ -72,6 +99,7 @@
 1. entire `world_render()`
 ```json
 "Figura Skeleton": {
+<<<<<<< HEAD
     "prefix": "Figura",
     "body": [
         "${4:function player_init()",
@@ -86,6 +114,22 @@
         "${3:--WORLD RENDER--}",
         "end}"
     ]
+=======
+	"prefix": "Figura",
+	"body": [
+		"${4:function player_init()",
+		"${1:--PLAYER INIT--}",
+		"end}",
+		"",
+		"${5:function tick()",
+		"${2:--TICK--}",
+		"end}",
+		"",
+		"${6:function world_render()",
+		"${3:--WORLD RENDER--}",
+		"end}"
+	]
+>>>>>>> 662c89de0ba11bb38264614d0f88113ea3bca895
 },
 ```
 
@@ -100,6 +144,7 @@
 1. entire `world_render()`
 ```json
 "Figura Skeleton No Comment": {
+<<<<<<< HEAD
     "prefix": "Figura:noComment",
     "body": [
         "${4:function player_init()",
@@ -114,6 +159,22 @@
         "$3",
         "end}"
     ]
+=======
+	"prefix": "Figura:noComment",
+	"body": [
+		"${4:function player_init()",
+		"$1",
+		"end}",
+		"",
+		"${5:function tick()",
+		"$2",
+		"end}",
+		"",
+		"${6:function world_render(delta)",
+		"$3",
+		"end}"
+	]
+>>>>>>> 662c89de0ba11bb38264614d0f88113ea3bca895
 },
 ```
 
@@ -135,6 +196,7 @@
 1. inside `onCommand()`
 ```json
 "Figura Skeleton All": {
+<<<<<<< HEAD
     "prefix": "Figura:all",
     "body": [
         "${1:function player_init()",
@@ -164,3 +226,34 @@
     ]
 }
 ```
+=======
+	"prefix": "Figura:all",
+	"body": [
+		"${1:function player_init()",
+		"    $8",
+		"end}",
+		"",
+		"${2:function tick()",
+		"    $9",
+		"end}",
+		"",
+		"${3:function render(delta)",
+		"    $10",
+		"end}",
+		"",
+		"${4:function world_render(delta)",
+		"    $11",
+		"end}",
+		"",
+		"${5:function onDamage(damage,source)",
+		"    $12",
+		"end}",
+		"",
+		"${6:chat.setFiguraCommandPrefix(\"${7:/}\")",
+		"function onCommand(text)",
+		"    $13",
+		"end}"
+	]
+}
+```
+>>>>>>> 662c89de0ba11bb38264614d0f88113ea3bca895

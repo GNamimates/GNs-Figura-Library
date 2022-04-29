@@ -30,15 +30,15 @@
 		"prefix": "Figura",
 		"body": [
 			"${4:function player_init()",
-			"${1:--PLAYER INIT--}",
+			"    ${1:--PLAYER INIT--}",
 			"end}",
 			"",
 			"${5:function tick()",
-			"${2:--TICK--}",
+			"    ${2:--TICK--}",
 			"end}",
 			"",
 			"${6:function world_render()",
-			"${3:--WORLD RENDER--}",
+			"    ${3:--WORLD RENDER--}",
 			"end}"
 		]
 	},
@@ -85,6 +85,38 @@
 			"function onCommand(text)",
 			"    $13",
 			"end}"
+		]
+	},
+	"Player_Init": {
+		"prefix": "player_init",
+		"body": [
+			"function player_init()",
+			"    $1",
+			"end",
+		]
+	},
+	"tick": {
+		"prefix": "tick",
+		"body": [
+			"function tick()",
+			"    $1",
+			"end",
+		]
+	},
+	"render": {
+		"prefix": "render",
+		"body": [
+			"function render(delta)",
+			"    $1",
+			"end",
+		]
+	},
+	"world_render": {
+		"prefix": "world_render",
+		"body": [
+			"function world_render(delta)",
+			"    $1",
+			"end",
 		]
 	}
 }

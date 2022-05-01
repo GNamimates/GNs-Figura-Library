@@ -1,0 +1,32 @@
+{
+	"meta": {
+		"format_version": "4.0",
+		"creation_time": 1640019237,
+		"model_format": "free",
+		"box_uv": false
+	},
+	"name": "",
+	"geometry_name": "",
+	"visible_box": [1, 1, 0],
+	"variable_placeholders": "",
+	"resolution": {
+		"width": 16,
+		"height": 16
+	},
+	"elements": [],
+	"outliner": [
+		{
+			"name": "NO_PARENT",
+			"origin": [0, 0, 0],
+			"color": 0,
+			"uuid": "ea0552b4-8be8-7993-3449-c7a3f7b4d3f1",
+			"export": true,
+			"isOpen": true,
+			"locked": false,
+			"visibility": true,
+			"autouv": 0,
+			"children": []
+		}
+	],
+	"textures": []
+}

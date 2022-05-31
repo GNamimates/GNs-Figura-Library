@@ -1,7 +1,7 @@
 {
 	"meta": {
 		"format_version": "4.0",
-		"creation_time": 1643475544,
+		"creation_time": 1653313054,
 		"model_format": "free",
 		"box_uv": false
 	},
@@ -9,6 +9,8 @@
 	"geometry_name": "",
 	"visible_box": [1, 1, 0],
 	"variable_placeholders": "",
+	"variable_placeholder_buttons": [],
+	"timeline_setups": [],
 	"resolution": {
 		"width": 32,
 		"height": 32
@@ -55,6 +57,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "3944c6dd-cee0-1c35-5fdd-cca9c3e5e029"
 		},
 		{
@@ -97,6 +100,7 @@
 					"texture": null
 				}
 			},
+			"type": "cube",
 			"uuid": "116ee344-92fe-9e3e-eb22-ca65021874ab"
 		},
 		{
@@ -139,6 +143,7 @@
 					"texture": null
 				}
 			},
+			"type": "cube",
 			"uuid": "2fab00d9-b315-c65a-ab8e-2ff0ddfa2cc4"
 		},
 		{
@@ -177,6 +182,7 @@
 					"texture": null
 				}
 			},
+			"type": "cube",
 			"uuid": "ea1ddb51-a1c9-9072-acb8-1db56b0a5a79"
 		},
 		{
@@ -215,6 +221,7 @@
 					"texture": null
 				}
 			},
+			"type": "cube",
 			"uuid": "67d09325-12d6-fc8e-92eb-6e90097be931"
 		},
 		{
@@ -253,6 +260,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "a768b9ca-a020-b9fe-9b7b-0b4df5bfbb17"
 		},
 		{
@@ -290,6 +298,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "4dfe3322-9729-8239-2dfb-6d2a82afa5c2"
 		},
 		{
@@ -334,6 +343,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "b1099f01-bb6d-a983-ca88-7c9322582350"
 		}
 	],
@@ -419,7 +429,7 @@
 	],
 	"textures": [
 		{
-			"path": "C:\\Users\\MIGUEL-PC\\Desktop\\Figura\\model_files\\§6 REQUESTS\\Dragekk's pirate hat\\texture.png",
+			"path": "C:\\Users\\MIGUEL-PC\\Desktop\\GNs Figura Libary\\model_files\\Requests\\Dragekk's pirate hat\\texture.png",
 			"name": "texture.png",
 			"folder": "block",
 			"namespace": "",

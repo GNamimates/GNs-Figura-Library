@@ -1,10 +1,16 @@
 
-SHADOW_ROTATION = vectors.of({40,0,0})
+SHADOW_ROTATION = vectors.of({0,0,0})
 
 animation.flatten.play()
 
+
+function tick()
+    SHADOW_ROTATION = vectors.of({0,0,(world.getTimeOfDay()/12000)*90})
+end
+
 function world_render(delta)
     model.flattening.setEnabled(not renderer.isFirstPerson())
+    model.flattening.setScale({1,10000000000,1})
     if not renderer.isFirstPerson() then
         model.flattening.setRot({0,player.getBodyYaw(delta),0})
         model.flattening.offset.MIMIC_BODY.setRot({0,-player.getBodyYaw(delta),0})

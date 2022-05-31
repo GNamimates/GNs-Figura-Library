@@ -92,7 +92,7 @@
 		"body": [
 			"function player_init()",
 			"    $1",
-			"end",
+			"end"
 		]
 	},
 	"tick": {
@@ -100,7 +100,7 @@
 		"body": [
 			"function tick()",
 			"    $1",
-			"end",
+			"end"
 		]
 	},
 	"render": {
@@ -108,7 +108,7 @@
 		"body": [
 			"function render(delta)",
 			"    $1",
-			"end",
+			"end"
 		]
 	},
 	"world_render": {
@@ -116,7 +116,7 @@
 		"body": [
 			"function world_render(delta)",
 			"    $1",
-			"end",
+			"end"
 		]
 	}
 }

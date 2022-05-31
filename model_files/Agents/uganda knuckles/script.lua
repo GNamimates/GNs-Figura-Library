@@ -40,17 +40,25 @@ count = 1
 action_wheel.SLOT_1.setItem("crimson_planks")
 action_wheel.SLOT_1.setTitle("*Clicking Noises*")
 action_wheel.SLOT_1.setFunction(function ()
+    ping.click()
+end)
+
+ping.click = function ()
     for index, agent in pairs(agents) do
         agent.clicksLeft = config.clickCount
     end
-end)
+end
 
 action_wheel.SLOT_2.setItem("bell")
 action_wheel.SLOT_2.setTitle("*What do we want*")
 action_wheel.SLOT_2.setFunction(function ()
+    ping.dawe()
+end)
+
+ping.dawe = function ()
     sound.playCustomSound("what do we want",player.getPos(),{1,1})
     Delay(30,daWae)
-end)
+end
 
 function daWae()
     for index, agent in pairs(agents) do
@@ -203,10 +211,17 @@ function onCommand(cmd)
         local players = world.getPlayers()
         for name, _ in pairs(players) do
             if name == Username then
-                targetUsername = Username
-                log('§afollowing "'..name..'"')
+                ping.target(Username)
+                
             end
         end
+    end
+end
+
+ping.target = function (target)
+    targetUsername = target
+    if client.isHost() then
+        log('§afollowing "'..target..'"')
     end
 end
 

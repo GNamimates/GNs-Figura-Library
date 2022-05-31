@@ -1,0 +1,15 @@
+{
+  "config": {
+    "type": "TABLE",
+    "entries": {
+      "wearing": {
+        "type": "TABLE",
+        "entries": {
+          "pants": 5.0,
+          "shirt": 3.0,
+          "head": 0.0
+        }
+      }
+    }
+  }
+}

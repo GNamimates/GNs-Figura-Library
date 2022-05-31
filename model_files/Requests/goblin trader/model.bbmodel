@@ -1,7 +1,7 @@
 {
 	"meta": {
 		"format_version": "4.0",
-		"creation_time": 1641221536,
+		"creation_time": 1653311747,
 		"model_format": "free",
 		"box_uv": true
 	},
@@ -9,6 +9,8 @@
 	"geometry_name": "",
 	"visible_box": [1, 1, 0],
 	"variable_placeholders": "",
+	"variable_placeholder_buttons": [],
+	"timeline_setups": [],
 	"resolution": {
 		"width": 46,
 		"height": 46
@@ -49,6 +51,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "5a2379e8-634c-91e3-aa2b-73e9264df1fa"
 		},
 		{
@@ -87,6 +90,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "08e353a3-4fd5-96a3-b614-bf137f5ab46f"
 		},
 		{
@@ -126,6 +130,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "8ad7144f-be0d-fb6e-17ee-1e0959c1540b"
 		},
 		{
@@ -164,6 +169,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "c7b930b5-551c-d65d-bee9-a7fbd922f669"
 		},
 		{
@@ -202,6 +208,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "0ac0064f-9703-17d1-9d9c-c4ee5e699cfa"
 		},
 		{
@@ -240,6 +247,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "4ed43eab-ac1d-a2a8-538e-78e95174a89c"
 		},
 		{
@@ -278,6 +286,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "9891716a-6de0-54dc-be99-d731922855e0"
 		},
 		{
@@ -316,6 +325,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "d2aaa0db-d732-6e65-7440-ee0fd9222d72"
 		},
 		{
@@ -354,6 +364,7 @@
 					"texture": 0
 				}
 			},
+			"type": "cube",
 			"uuid": "e61958d0-b258-209d-2dd8-3805b6616faa"
 		}
 	],
@@ -461,7 +472,7 @@
 	],
 	"textures": [
 		{
-			"path": "C:\\Users\\MIGUEL-PC\\Desktop\\Figura\\model_files\\goblin trader\\texture.png",
+			"path": "C:\\Users\\MIGUEL-PC\\Desktop\\GNs Figura Libary\\model_files\\Requests\\goblin trader\\texture.png",
 			"name": "texture.png",
 			"folder": "",
 			"namespace": "",

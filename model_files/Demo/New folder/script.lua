@@ -1,0 +1,1 @@
+print(world.getBlockState({0,0,0}).getMaterial())

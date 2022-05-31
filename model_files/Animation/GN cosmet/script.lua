@@ -4,11 +4,13 @@
 LDM = false
 LDMDistance = 256
 
-debugMode = false
+debugMode = true
 
 hideItems = {"sword","shield"}
+-->==========[ ANIMATION TAGS ]==========<--
 snappedToBlockAnimations = {"sitDown","sitSwing"}
----
+animalSitType = {"minecart","horse","llama","pig","dragon","chicken"}
+-->==========[ GENERIC ]==========<--
 rotation = nil
 lastRotation = vectors.of({})
 velocity = nil
@@ -16,11 +18,18 @@ lastVelocity = nil
 distanceVelociy = 0
 distanceTraveled = 0
 snapToBlocks = false
+tiltMovementStrength = 0
+
+-->==========[ VEHICLE ]==========<--
+isAnimalSitting = false
+lastVehicleType = ""
 
 timeSinceLastUpdate = 0
 timeSinceElytra = 0
 
+isSwingingArm = false
 wasSwingingArm = false
+
 wasWearingElytra = false
 wasUsingShield = false
 isSwordOpen = false
@@ -31,14 +40,6 @@ p = false
 debugActionRow = {}
 
 boomBoxPos = nil
-
---pings
-network.registerPing("animST")
-network.registerPing("toggleChat")
-network.registerPing("playBoomBox")
-network.registerPing("stopBoomBox")
-network.registerPing("moveBoomBox")
-network.registerPing("vineBoom")
 
 keybind.attack = keybind.getRegisteredKeybind("key.attack")
 keybind.use = keybind.getRegisteredKeybind("key.use")
@@ -198,16 +199,13 @@ end
 ---=====================-=--
 
 function player_init()
-    boomBoxPos = player.getPos()
-    pages.general()
-
-    nameplate.ENTITY.setEnabled(false)
-    animation.switchTo("shield_hidden","SHIELD")
+    nameplate.ENTITY.setEnabled(true)
+    localSwitchTo("shield_hidden","SHIELD")
     currentAnimation["SHIELD"] = "shield_hidden"
-    animation.switchTo("wings_hidden","WINGS")
+    localSwitchTo("wings_hidden","WINGS")
     model.DEBUG_MENU_NO_PARENT.setEnabled(debugMode)
     if debugMode then
-        initiateDebugMode()
+        reloadDebugMenu()
     end
     elytra_model.LEFT_WING.setEnabled(false)
     elytra_model.RIGHT_WING.setEnabled(false)
@@ -217,19 +215,19 @@ function player_init()
     for _, v in pairs(vanilla_model) do
         v.setEnabled(false)
     end
-    auth()
+
     for key, value in pairs(armor_model) do
         value.setEnabled(false)
     end
     for key, value in pairs(animation) do
         if type(value) == "table" then
-            value.setBlendTime(0.1)
+            value.setBlendTime(0.05)
         end
     end
-    animation.attack2.setBlendTime(0.001)
-    animation.attack3.setBlendTime(0.001)
+--    animation.attack2.setBlendTime(0.001)
+--    animation.attack3.setBlendTime(0.001)
 
-    animation.eating.setBlendTime(0.3)
+--    animation.eating.setBlendTime(0.3)
     animation["speechBubble_outro"].setBlendTime(0)
     animation["speechBubble_intro"].setBlendTime(0)
 
@@ -237,333 +235,403 @@ function player_init()
     animation.swordIdle.setBlendTime(0.01)
 
     animation.swordAttack.setPriority(2)
-    animation.swordAttack.setBlendTime(0.01)
+--    animation.swordAttack.setBlendTime(0.01)
     animation.swordAttack.setSpeed(2)
     animation.swordSlam.setPriority(2)
     animation.swordSlam.setBlendTime(0.01)
     animation.swordSlam.setSpeed(2)
     animation.swordSlam.setSpeed(2)
     animation.Carmalledansen.setSpeed(1.4)
+
+    animation.VehicleSit.setPriority(2)
+    animation.AnimalVehicleSit.setPriority(2)
+--    animation.wings_intro.setBlendTime(0)
+--    animation.wings_outro.setBlendTime(0)
+--    animation.wings_idle.setBlendTime(0)
+--    animation.wings_hidden.setBlendTime(0)
 end
+-->========================================[ ACTION WHEEL ]=========================================<--
+do
+    action_wheel_pages = {}
 
-pages = {
-    dances = function ()
-        action_wheel.clear()
-        action_wheel.SLOT_1.setItem("minecraft:barrier")
-        action_wheel.SLOT_1.setTitle("Idle")
-        action_wheel.SLOT_1.setFunction(function ()
-            animation.switchTo("stop","DANCE")
-        end)
+    local location = nil
+    local page = 1
 
-        action_wheel.SLOT_2.setItem("minecraft:grass_block")
-        action_wheel.SLOT_2.setTitle("Square Dance")
-        action_wheel.SLOT_2.setFunction(function ()
-            animation.switchTo("SquareDance","DANCE")
-        end)
+    local toggle_ping_id = 0
 
-        action_wheel.SLOT_3.setItem("minecraft:feather")
-        action_wheel.SLOT_3.setTitle("Default Dance")
-        action_wheel.SLOT_3.setFunction(function ()
-            animation.switchTo("DefaultDance","DANCE")
-        end)
+    local function renderSlot(slot, element)
+        slot.setTitle(element.title)
+        slot.setItem(element.item)
+        slot.setHoverItem(element.hoverItem)
+        slot.setColor(element.color)
+        slot.setHoverColor(element.hoverColor)
+        slot.setFunction(element.func) -- can be nil for folders
+    end
 
-        action_wheel.SLOT_4.setItem("minecraft:oak_stairs")
-        action_wheel.SLOT_4.setTitle("Sit Down")
-        action_wheel.SLOT_4.setFunction(function ()
-            animation.switchTo("sitDown","DANCE")
-        end)
+    local function update()
+        if location == nil then return end
 
-        action_wheel.SLOT_5.setItem("minecraft:cut_copper_stairs")
-        action_wheel.SLOT_5.setTitle("SitSwing")
-        action_wheel.SLOT_5.setFunction(function ()
-            animation.switchTo("sitSwing","DANCE")
-        end)
+        local requireMultiplePages = (#location.contents > 8) or
+                                         (location.back ~= nil)
+        local pageSize = 8
 
-        action_wheel.SLOT_6.setItem("minecraft:glowstone")
-        action_wheel.SLOT_6.setTitle("Carmalledansen")
-        action_wheel.SLOT_6.setFunction(function ()
-            animation.switchTo("Carmalledansen","DANCE")
-        end)
+        if requireMultiplePages then
+            pageSize = 6
 
-        action_wheel.SLOT_7.setItem("minecraft:red_bed")
-        action_wheel.SLOT_7.setTitle("sleeping")
-        action_wheel.SLOT_7.setFunction(function ()
-            animation.switchTo("sleeping","DANCE")
-        end)
-    end,
-    general = function ()
-        action_wheel.clear()
-        action_wheel.SLOT_1.setItem("minecraft:jukebox")
-        action_wheel.SLOT_1.setTitle("Dances")
-        action_wheel.SLOT_1.setFunction(function ()
-            pages.dances()
-        end)
-        action_wheel.SLOT_2.setItem("minecraft:arrow")
-        action_wheel.SLOT_2.setTitle("Move BoomBox")
-        action_wheel.SLOT_2.setFunction(function ()
-            if player.getTargetedBlockPos(false) then
-                network.ping("moveBoomBox",player.getTargetedBlockPos(false))
+            action_wheel.SLOT_4.setFunction(function()
+                page = page + 1
+                if page > math.ceil(#location.contents / 6) then
+                    page = math.ceil(#location.contents / 6)
+                end
+                if #location.contents == 0 then page = 1 end
+                update()
+            end)
+            action_wheel.SLOT_5.setFunction(function()
+                page = page - 1
+                if page < 1 then page = 1 end
+                update()
+            end)
+
+            if page == math.ceil(#location.contents / 6) or #location.contents ==
+                0 then
+                action_wheel.SLOT_4.setItem("minecraft:air")
+                action_wheel.SLOT_4.setTitle("")
+            else
+                action_wheel.SLOT_4.setItem("minecraft:arrow")
+                action_wheel.SLOT_4.setTitle("Next")
             end
-        end)
-        action_wheel.SLOT_3.setItem("sponge")
-        action_wheel.SLOT_3.setTitle("ZAD MODE")
-        action_wheel.SLOT_3.setFunction(function ()
-           network.ping("vineBoom")
-        end)
+
+            if page == 1 then
+                if location.back == nil then
+                    action_wheel.SLOT_5.setItem("minecraft:air")
+                    action_wheel.SLOT_5.setTitle("")
+                else
+                    action_wheel.SLOT_5.setItem("minecraft:dark_oak_door")
+                    action_wheel.SLOT_5.setTitle("Exit")
+                    action_wheel.SLOT_5.setFunction(function()
+                        location = location.back
+                        page = 1
+                        update()
+                    end)
+                end
+            else
+                action_wheel.SLOT_5.setItem("minecraft:arrow")
+                action_wheel.SLOT_5.setTitle("Previous")
+            end
+        end
+
+        local slotid = 1
+        for i = page * pageSize - (pageSize - 1), page * pageSize, 1 do
+            if i <= #location.contents then
+                renderSlot(action_wheel["SLOT_" .. slotid], location.contents[i])
+                if location.contents[i].type == "folder" then
+                    action_wheel["SLOT_" .. slotid].setFunction(function()
+                        location = location.contents[i]
+                        page = 1
+                        update()
+                    end)
+                end
+            else
+                renderSlot(action_wheel["SLOT_" .. slotid], {})
+            end
+            slotid = slotid + 1
+            if slotid == 4 and requireMultiplePages then
+                slotid = slotid + 2
+            end
+            if slotid > 8 then slotid = 1 end
+        end
     end
-}
----==========================
--- Shader Stuff
-    local format = "POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL"
-  local vestexShader = [[#version 150
 
-  in vec3 Position;
-  in vec4 Color;
-  in vec2 UV0;
-  in ivec2 UV1;
-  in ivec2 UV2;
-  in vec3 Normal;
-  
-  uniform sampler2D Sampler1; //Overlay Sampler
-  uniform sampler2D Sampler2; //Lightmap Sampler
-  
-  uniform mat4 ModelViewMat;
-  uniform mat4 ProjMat;
-  
-  uniform vec3 Light0_Direction;
-  uniform vec3 Light1_Direction;
-  
-  out float vertexDistance;
-  out vec4 vertexColor;
-  out vec4 lightMapColor;
-  out vec4 overlayColor;
-  out vec2 texCoord0;
-  out vec4 normal;
-  
-  vec4 minecraft_mix_light(vec3 lightDir0, vec3 lightDir1, vec3 normal, vec4 color) {
-      lightDir0 = normalize(lightDir0);
-      lightDir1 = normalize(lightDir1);
-      float light0 = max(0.0, dot(lightDir0, normal));
-      float light1 = max(0.0, dot(lightDir1, normal));
-      float lightAccum = min(1.0, (light0 + light1) * 0.6 + 0.4);
-      return vec4(color.rgb * lightAccum, color.a);
-  }
-  
-  void main() {
-      gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
-  
-      vertexDistance = length((ModelViewMat * vec4(Position, 1.0)).xyz);
-      vertexColor = minecraft_mix_light(Light0_Direction, Light1_Direction, Normal, Color);
-      lightMapColor = texelFetch(Sampler2, UV2 / 16, 0);
-      overlayColor = texelFetch(Sampler1, UV1, 0);
-      texCoord0 = UV0;
-      normal = ProjMat * ModelViewMat * vec4(Normal, 0.0);
-  }]]
-local fragmentShader = [[ 
-  #version 150
-  out vec4 fragColor;
-  uniform vec2 ScreenSize;
-  uniform float GameTime;
-  float WorldTime = GameTime*100;
+    function action_wheel_pages.createFolder(title, item)
+        local ret = {
+            type = "folder",
+            contents = {},
+            back = nil,
 
-  uniform sampler2D Sampler0;
+            title = title,
+            item = item,
+            hoverItem = nil,
+            color = nil,
+            hoverColor = nil
+        }
+        ret.add = function(element)
+            if element.type == "folder" then element.back = ret end
+            table.insert(ret.contents, element)
+        end
+        ret.remove = function(element)
+            for k, v in pairs(ret.contents) do
+                if v == element then ret.contents[k] = nil end
+            end
+        end
+        ret.setTitle = function(title) ret.title = title end
+        ret.getTitle = function() return ret.title end
+        ret.setItem = function(item) ret.item = item end
+        ret.getItem = function() return ret.item end
+        ret.setHoverItem = function(hoverItem) ret.hoverItem = hoverItem end
+        ret.getHoverItem = function() return ret.hoverItem end
+        ret.setColor = function(color) ret.color = color end
+        ret.getColor = function() return ret.color end
+        ret.setHoverColor = function(color) ret.hoverColor = color end
+        ret.getHoverColor = function() return ret.hoverColor end
+        ret.clear = function()
+            ret = {
+                type = "folder",
+                contents = {},
+                back = nil,
 
-  uniform vec4 ColorModulator;
-  uniform float FogStart;
-  uniform float FogEnd;
-  uniform vec4 FogColor;
+                title = nil,
+                item = nil,
+                hoverItem = nil,
+                color = nil,
+                hoverColor = nil
+            }
+        end
+        return ret
+    end
 
-  in float vertexDistance;
-  in vec4 vertexColor;
-  in vec4 lightMapColor;
-  in vec4 overlayColor;
-  in vec2 texCoord0;
-  in vec4 normal;
+    function action_wheel_pages.createItem(title, item)
+        local ret = {
+            type = "item",
+            func = nil,
 
-  vec4 linear_fog(vec4 inColor, float vertexDistance, float fogStart, float fogEnd, vec4 fogColor) {
-    if (vertexDistance <= fogStart) {
-        return inColor;
-    }
+            title = title,
+            item = item,
+            hoverItem = nil,
+            color = nil,
+            hoverColor = nil
+        }
+        ret.setFunction = function(func) ret.func = func end
+        ret.getFunction = function(func) ret.func = func end
+        ret.setTitle = function(title) ret.title = title end
+        ret.getTitle = function() return ret.title end
+        ret.setItem = function(item) ret.item = item end
+        ret.getItem = function() return ret.item end
+        ret.setHoverItem = function(hoverItem) ret.hoverItem = hoverItem end
+        ret.getHoverItem = function() return ret.hoverItem end
+        ret.setColor = function(color) ret.color = color end
+        ret.getColor = function() return ret.color end
+        ret.setHoverColor = function(color) ret.hoverColor = color end
+        ret.getHoverColor = function() return ret.hoverColor end
+        ret.clear = function()
+            ret = {
+                type = "item",
+                func = nil,
 
-    float fogValue = vertexDistance < fogEnd ? smoothstep(fogStart, fogEnd, vertexDistance) : 1.0;
-    return vec4(mix(inColor.rgb, fogColor.rgb, fogValue * fogColor.a), inColor.a);
-  }
+                title = nil,
+                item = nil,
+                hoverItem = nil,
+                color = nil,
+                hoverColor = nil
+            }
+        end
+        ret.toggleVar = function(variable, on_text, on_icon, off_text, off_icon)
+            local _toggle_ping_id = toggle_ping_id
+            network.registerPing("action_wheel_toggleVar_ping_" ..
+                                     _toggle_ping_id)
+            ret.setFunction(function()
+                network.ping("action_wheel_toggleVar_ping_" .. _toggle_ping_id,
+                             not _G[variable])
+            end)
+            _G["action_wheel_toggleVar_ping_" .. _toggle_ping_id] = function(x)
+                _G[variable] = x
+                if _G[variable] then
+                    ret.setTitle(off_text)
+                    ret.setItem(off_icon)
+                else
+                    ret.setTitle(on_text)
+                    ret.setItem(on_icon)
+                end
+                update()
+            end
+            _G["action_wheel_toggleVar_ping_" .. _toggle_ping_id](_G[variable])
+            toggle_ping_id = toggle_ping_id + 1
+        end
+        return ret
+    end
 
-  //CBS
-  //Parallax scrolling fractal galaxy.
-  //Inspired by JoshP's Simplicity shader: https://www.shadertoy.com/view/lslGWr
-  //Origionally from https://www.shadertoy.com/view/MslGWN
-  
-  // http://www.fractalforums.com/new-theories-and-research/very-simple-formula-for-fractal-patterns/
-  float field(in vec3 p,float s) {
-    float strength = 7. + .03 * log(1.e-6 + fract(sin(WorldTime) * 4373.11));
-    float accum = s/4.;
-    float prev = 0.;
-    float tw = 0.;
-    for (int i = 0; i < 26; ++i) {
-      float mag = dot(p, p);
-      p = abs(p) / mag + vec3(-.5, -.4, -1.5);
-      float w = exp(-float(i) / 7.);
-      accum += w * exp(-strength * pow(abs(mag - prev), 2.2));
-      tw += w;
-      prev = mag;
-    }
-    return max(0., 5. * accum / tw - .7);
-  }
-  
-  // Less iterations for second layer
-  float field2(in vec3 p, float s) {
-    float strength = 7. + .03 * log(1.e-6 + fract(sin(WorldTime) * 4373.11));
-    float accum = s/4.;
-    float prev = 0.;
-    float tw = 0.;
-    for (int i = 0; i < 18; ++i) {
-      float mag = dot(p, p);
-      p = abs(p) / mag + vec3(-.5, -.4, -1.5);
-      float w = exp(-float(i) / 7.);
-      accum += w * exp(-strength * pow(abs(mag - prev), 2.2));
-      tw += w;
-      prev = mag;
-    }
-    return max(0., 5. * accum / tw - .7);
-  }
-  
-  vec3 nrand3( vec2 co )
-  {
-    vec3 a = fract( cos( co.x*8.3e-3 + co.y )*vec3(1.3e5, 4.7e5, 2.9e5) );
-    vec3 b = fract( sin( co.x*0.3e-3 + co.y )*vec3(8.1e5, 1.0e5, 0.1e5) );
-    vec3 c = mix(a, b, 0.5);
-    return c;
-  }
-  
-  
-  void main() {
-      vec2 uv = 2. * gl_FragCoord.xy / ScreenSize.xy - 1.;
-    vec2 uvs = uv * ScreenSize.xy / max(ScreenSize.x, ScreenSize.y);
-    vec3 p = vec3(uvs / 4., 0) + vec3(1., -1.3, 0.);
-    p += .2 * vec3(sin(WorldTime / 16.), sin(WorldTime / 12.),  sin(WorldTime / 128.));
-    
-    float freqs[4];
-    //Sound
-    freqs[0] = 0.0;
-    freqs[1] = 0.0;
-    freqs[2] = 0.2;
-    freqs[3] = 0.4;
-  
-    float t = field(p,freqs[2]);
-    float v = (1. - exp((abs(uv.x) - 1.) * 6.)) * (1. - exp((abs(uv.y) - 1.) * 6.));
-    
-      //Second Layer
-    vec3 p2 = vec3(uvs / (4.+sin(WorldTime*0.11)*0.2+0.2+sin(WorldTime*0.15)*0.3+0.4), 1.5) + vec3(2., -1.3, -1.);
-    p2 += 0.25 * vec3(sin(WorldTime / 16.), sin(WorldTime / 12.),  sin(WorldTime / 128.));
-    float t2 = field2(p2,freqs[3]);
-    vec4 c2 = vec4(0.1,0.0,0.1,1.0);
-    
-    
-    //Let's add some stars
-    //Thanks to http://glsl.heroku.com/e#6904.0
-    vec2 seed = p.xy * 2.0;	
-    seed = floor(seed * ScreenSize.x);
-    vec3 rnd = nrand3( seed );
-    vec4 starcolor = vec4(pow(rnd.y,40.0));
-    
-    //Second Layer
-    vec2 seed2 = p2.xy * 2.0;
-    seed2 = floor(seed2 * ScreenSize.x);
-    vec3 rnd2 = nrand3( seed2 );
-    starcolor += vec4(pow(rnd2.y,40.0));
-    
-    fragColor = linear_fog((mix(freqs[3]-.3, 1., v) * vec4(1.5*freqs[2] * t * t* t , 1.2*freqs[1] * t * t, freqs[3]*t, 1.0)+c2+starcolor),vertexDistance, FogStart, FogEnd, FogColor);
-  }
-]]
-  local customUniforms = {}
-    renderlayers.registerShader("GalaxyShader",format,vestexShader,fragmentShader,3,customUniforms)
-    
-  local before = function()
-    renderlayers.useShader("GalaxyShader")
-    renderlayers.setTexture(0, "MY_TEXTURE")
-    renderlayers.enableDepthTest()
-    renderlayers.enableLightmap()
-    renderlayers.disableCull()
-    renderlayers.enableOverlay()
-  end
-  local after = function()
-    renderlayers.disableLightmap()
-    renderlayers.disableDepthTest()
-    renderlayers.enableCull()
-    renderlayers.disableOverlay()
-  end
-  ----renderlayers.registerRenderLayer("RenderLayer", {}, before, after)
-
-
-lastChatMessage = ""
-
-size = 1
-network.registerPing("scale")
---=====================GREEN WHEEL==========================--
---scrollResult1 = 0
---scroll1 = 0
---
---function player_init()
---    model.HUD.setScale{0.6666,1,0.6666}
---end
---
---function tick()
---    scroll1 = scroll1 + client.getMouseScroll()
---end
---
---function world_render(delta)
---    scrollResult1 = lerp(scrollResult1,scroll1,0.3)
---    for i = -2, 2, 1 do
---        model.HUD.ACTION_ROW1["BTN1"..i+3].setPos{0,((scrollResult1+i)%5-1.5)*16,0}
---    end
---end
---
---function lerp(a, b, x)
---    return a + (b - a) * x
---end
-
---==========================================================--
-function action_wheel.clear()
-    action_wheel.SLOT_1.clear()
-    action_wheel.SLOT_2.clear()
-    action_wheel.SLOT_3.clear()
-    action_wheel.SLOT_4.clear()
-    action_wheel.SLOT_5.clear()
-    action_wheel.SLOT_6.clear()
-    action_wheel.SLOT_7.clear()
-    action_wheel.SLOT_8.clear()
+    function action_wheel_pages.setLocation(folder)
+        location = folder
+        update()
+    end
 end
 
-function scale(scale)
-    size = scale
-    --model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.setScale({1/scale,1/scale,1/scale})
-    model.NO_PARENT_BASE.setScale({scale,scale,scale})
-    if client.isHost() then
-        camera.FIRST_PERSON.setPos({0,(size-1)*1.65,0})
-        camera.THIRD_PERSON.setPos({0,(size-1)*1.65,(size-1)*1.65})
-    end
-    for key, value in pairs(animation.listAnimations()) do
-        animation[value].setSpeed(1/scale)
+-->========================================[ ACTION WHEEL STRUCTURE ]=========================================<--
+trueCameraPos = false
+do
+    root = action_wheel_pages.createFolder("root",nil)
+    
+    local dances = action_wheel_pages.createFolder("Dances","minecraft:redstone_lamp")
+    
+    do
+        local stopDance = action_wheel_pages.createItem("Stop Dance","minecraft:barrier")
+        stopDance.setFunction(function ()animation.switchTo("stop","DANCE")end)
+        dances.add(stopDance)
+        
+        local SquareDance = action_wheel_pages.createItem("Square Dance","minecraft:item_frame")
+        SquareDance.setFunction(function ()animation.switchTo("SquareDance","DANCE")end)
+        dances.add(SquareDance)
+        
+        local DefaultDance = action_wheel_pages.createItem("Default Dance","minecraft:apple")
+        DefaultDance.setFunction(function ()animation.switchTo("DefaultDance","DANCE")end)
+        dances.add(DefaultDance)
+
+        local sitSwing = action_wheel_pages.createItem("Sit Down","minecraft:oak_stairs")
+        sitSwing.setFunction(function ()animation.switchTo("sitSwing","DANCE")end)
+        dances.add(sitSwing)
+
+        local Carmalledansen = action_wheel_pages.createItem("Carmalledansen","minecraft:glowstone")
+        Carmalledansen.setFunction(function ()animation.switchTo("Carmalledansen","DANCE")end)
+        dances.add(Carmalledansen)
+
+        local sleeping = action_wheel_pages.createItem("sleeping","minecraft:red_bed")
+        sleeping.setFunction(function ()animation.switchTo("sleeping","DANCE")end)
+        dances.add(sleeping)
+
     end
 
-    animation.DefaultDance.setSpeed((1/scale)*1.1)
-    animation.sprint.setSpeed((1/scale))
-    animation.Carmalledansen.setSpeed((1/scale)*1.1)
-    animation.SquareDance.setSpeed((1/scale)*1.1)
-    animation.walk_forward.setSpeed((1/scale)*0.6)
-    animation.crawling_idle.setSpeed((1/scale)*0.6)
-    animation.WM_walk_forward.setSpeed((1/scale)*0.6)
-    animation.WM_walk_backward.setSpeed((1/scale)*0.6)
+    local taunt = action_wheel_pages.createFolder("Actions","minecraft:redstone_lamp")
 
-    animation.crawling_forward.setSpeed((1/scale)*0.6)
-    animation.mining.setSpeed((1/scale)*1.5)
-    animation.digging.setSpeed((1/scale)*1.5)
+    do
+        local stopTaunt = action_wheel_pages.createItem("Stop Taunt","minecraft:barrier")
+        stopTaunt.setFunction(function ()animation.switchTo("stop","TAUNT")end)
+        taunt.add(stopTaunt)
+
+        local popcorn = action_wheel_pages.createItem("Eat Popcorn","minecraft:raw_iron_block")
+        popcorn.setFunction(function ()animation.switchTo("popcornLoop","TAUNT")end)
+        taunt.add(popcorn)
+
+        local laugh = action_wheel_pages.createItem("Laugh","minecraft:note_block")
+        laugh.setFunction(function ()animation.switchTo("laugh","TAUNT")end)
+        taunt.add(laugh)
+
+        local salute = action_wheel_pages.createItem("Salute","minecraft:anvil")
+        salute.setFunction(function ()animation.switchTo("salute","TAUNT")end)
+        taunt.add(salute)
+    end
+
+    local resize = action_wheel_pages.createFolder("Resize","minecraft:tnt")
+    do
+        local Xbigger = action_wheel_pages.createItem("X x2","minecraft:red_concrete")
+        local Ybigger = action_wheel_pages.createItem("Y x2","minecraft:lime_concrete")
+        local Zbigger = action_wheel_pages.createItem("Z x2","minecraft:blue_concrete")
+        local Abigger = action_wheel_pages.createItem("Z x2","minecraft:white_concrete")
+        Xbigger.setFunction(function ()ping.scale(targetSize*vectors.of{2,1,1})end)
+        Ybigger.setFunction(function ()ping.scale(targetSize*vectors.of{1,2,1})end)
+        Zbigger.setFunction(function ()ping.scale(targetSize*vectors.of{1,1,2})end)
+        Abigger.setFunction(function ()ping.scale(vectors.of{targetSize.x,targetSize.x,targetSize.x}*2)end)
+        Abigger.setFunction(function ()ping.scale(vectors.of{targetSize.x,targetSize.x,targetSize.x}*2)end)
+        
+        local Xsmaller = action_wheel_pages.createItem("X x0.5","minecraft:red_concrete")
+        local Ysmaller = action_wheel_pages.createItem("Y x0.5","minecraft:lime_concrete")
+        local Zsmaller = action_wheel_pages.createItem("Z x0.5","minecraft:blue_concrete")
+        local Asmaller = action_wheel_pages.createItem("Z x0.5","minecraft:white_concrete")
+        Xsmaller.setFunction(function ()ping.scale(targetSize*vectors.of{0.5,1,1})end)
+        Ysmaller.setFunction(function ()ping.scale(targetSize*vectors.of{1,0.5,1})end)
+        Zsmaller.setFunction(function ()ping.scale(targetSize*vectors.of{1,1,0.5})end)
+        Asmaller.setFunction(function ()ping.scale(vectors.of{targetSize.x,targetSize.x,targetSize.x}*0.5)end)
+
+        local toggleCamPos = action_wheel_pages.createItem("Toggle Camera Pos","minecraft:observer")
+        toggleCamPos.setFunction(function ()trueCameraPos = not trueCameraPos end)
+        
+        resize.add(Xbigger)
+        resize.add(Xsmaller)
+        resize.add(Ybigger)
+        resize.add(Ysmaller)
+        resize.add(Zbigger)
+        resize.add(Zsmaller)
+        resize.add(Abigger)
+        resize.add(Asmaller)
+        resize.add(toggleCamPos)
+    end
+
+    root.add(dances)
+    root.add(taunt)
+    root.add(resize)
+    
+    action_wheel_pages.setLocation(root)
 end
 
-function animST(data)
-    local anim = data[1]
-    local type = data[2]
+-->========================================[ PLAYER SCALING ]=========================================<--
+
+
+function ping.scale(scale)
+    targetSize = scale
+end
+
+function tick()
+    local isXDiff = math.abs(targetSize.x-finalScale.x) > 0.01
+    local isYDiff = math.abs(targetSize.y-finalScale.y) > 0.01
+    local isZDiff = math.abs(targetSize.z-finalScale.z) > 0.01
+    if isXDiff then
+        finalScale.x = finalScale.x + (targetSize.x-finalScale.x)*0.5
+    else
+        finalScale.x = targetSize.x
+    end
+    if isYDiff then
+        finalScale.y = finalScale.y + (targetSize.y-finalScale.y)*0.5
+    else
+        finalScale.y = targetSize.y
+    end
+    if isZDiff then
+        finalScale.z = finalScale.z + (targetSize.z-finalScale.z)*0.5
+    else
+        finalScale.z = targetSize.z
+    end
+
+    if isXDiff or isYDiff or isZDiff then
+        --model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.setScale({1/finalScale,1/finalScale,1/finalScale})
+        model.NO_PARENT_BASE.SCALE.ORIGIN.setScale(finalScale)
+        model.DEBUG_MENU_NO_PARENT.setScale(finalScale)
+        local scaleRatio = 1/finalScale.y
+        animation.DefaultDance.setSpeed((scaleRatio)*1.1)
+        animation.sprint.setSpeed((scaleRatio))
+        animation.Carmalledansen.setSpeed((scaleRatio)*1.2)
+        animation.SquareDance.setSpeed((scaleRatio)*1.1)
+        animation.walk_forward.setSpeed((scaleRatio)*0.6)
+        animation.crawling_idle.setSpeed((scaleRatio)*0.6)
+        animation.WM_walk_forward.setSpeed((scaleRatio)*0.6)
+        animation.WM_walk_backward.setSpeed((scaleRatio)*0.6)
+        animation.crawling_forward.setSpeed((scaleRatio)*0.6)
+        animation.mining.setSpeed((scaleRatio)*1.5)
+        animation.digging.setSpeed((scaleRatio)*1.5)
+        --nameplate.ENTITY.setScale({finalScale,finalScale,finalScale})
+        --nameplate.ENTITY.setScale({0,2*(size-1),0})
+        if client.isHost() then
+            if trueCameraPos then
+                camera.FIRST_PERSON.setPos({0,(finalScale.y-1)*player.getEyeHeight(),0})
+                camera.THIRD_PERSON.setPos({0,(finalScale.y-1)*player.getEyeHeight(),-4+(finalScale.z)*4})
+            else
+                camera.FIRST_PERSON.setPos({0,0,0})
+                camera.THIRD_PERSON.setPos({0,0,0})
+            end
+        end
+        for _, value in pairs(animation.listAnimations()) do
+            animation[value].setSpeed(scaleRatio)
+        end
+    end
+
+    model.NO_PARENT_BASE.SCALE.setPos(model.NO_PARENT_BASE.SCALE.getPivot() * (finalScale*-1+1)- (model.NO_PARENT_BASE.SCALE.ORIGIN.getAnimPos()*(finalScale*-1+1)))
+end
+
+sizeTrainsitionTime = 0
+finalScale = vectors.of{1,1,1}
+targetSize = vectors.of{1,1,1}
+ping.scale(targetSize)
+
+-->========================================[ Animation ]=========================================<--
+
+model.NO_PARENT_BASE.SCALE.ORIGIN.B.AL.ALL.popcorn.setEnabled(false)
+model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.PopcornBag.setEnabled(false)
+
+function ping.forceSwitchTo(data)
+    localSwitchTo(data[1],data[2])
+end
+
+function localSwitchTo(anim,type)
+    if type == "TAUNT" then
+        model.NO_PARENT_BASE.SCALE.ORIGIN.B.AL.ALL.popcorn.setEnabled(anim == "popcornLoop")
+        model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.PopcornBag.setEnabled(anim == "popcornLoop")
+    end
     currentAnimation[type] = anim
     if lastAnimation[type] ~= "stop" and lastAnimation[type] ~= nil then
         animation[lastAnimation[type]].stop()
@@ -574,97 +642,62 @@ function animST(data)
     lastAnimation[type] = currentAnimation[type]
     timeSinceLastUpdate = 1
 end
-token = ""
-function auth()
-    if client.isHost() then
-        data.setName("GNL3.0")
-        token = data.load("TOKEN")
-        p = (token ~= "9958c067-59fd-43be-bd1a-60c903862198")
-        if P then
-            chat.sendMessage("Un-authorized version of GNs avatar detected, ")
-            model.NO_PARENT_BASE.SCALE.setEnabled(false)
-            for _, v in pairs(vanilla_model) do
-                v.setEnabled(true)
-            end
+
+function animation.switchTo(targetAnim,type)
+    local doItAnyways = false
+    if targetAnim ~= "stop" then
+        if not animation[targetAnim].isPlaying() then
+            doItAnyways = true
         end
     end
-end
-function animation.switchTo(animation,type)
-    if lastAnimation[type] ~= animation then
-        network.ping("animST",{animation,type})
-        model.NO_PARENT_BASE.SCALE.ORIGIN.sleepingIcons1.setEnabled(animation == "sleeping" and type == "DANCE")
-        model.NO_PARENT_BASE.SCALE.ORIGIN.sleepingIcons2.setEnabled(animation == "sleeping" and type == "DANCE")
+    if lastAnimation[type] ~= targetAnim or doItAnyways then
+        ping.forceSwitchTo({targetAnim,type})
+        model.NO_PARENT_BASE.SCALE.ORIGIN.sleepingIcons1.setEnabled(targetAnim == "sleeping" and type == "DANCE")
+        model.NO_PARENT_BASE.SCALE.ORIGIN.sleepingIcons2.setEnabled(targetAnim == "sleeping" and type == "DANCE")
         if type == "DANCE" then
             snapToBlocks = false
             for _, value in pairs(snappedToBlockAnimations) do
-                if animation == value then
+                if targetAnim == value then
                     snapToBlocks = true
                 end
             end
         end
     end
 end
-
-chat.setFiguraCommandPrefix("bb:")
-
-function onCommand(cmd)
-    if string.sub(cmd,4,4) == "p" then
-        network.ping("playBoomBox",string.sub(cmd,6,9999))
-    else
-        network.ping("playBoomBox",string.sub(cmd,6,9999))
+-->========================================[ DEBUG MENU ]=========================================<--
+lastRecordedCount = 0
+function reloadDebugMenu()
+    model.DEBUG_MENU_NO_PARENT.clearAllRenderTasks()
+    local offset = 4
+    for key, _ in pairs(currentAnimation) do
+        offset = offset + 1
+        model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","st"..tostring(offset),"...",true,{10,offset*-4,0})
+        model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","sts"..tostring(offset),"...",true,{9.5,offset*-4+0.5,0.1})
+        table.insert(debugActionRow,{index=offset,value=key})
     end
-end
-
-function playBoomBox(music)
-    sound.playSound(music,boomBoxPos,{1,1})
-end
-
-function moveBoomBox(pos)
-    boomBoxPos = pos+vectors.of({0,1,0})
-    model.NO_PARENT_BOOMBOX.setPos(boomBoxPos*vectors.of({-16,-16,16}))
-end
-
-function initiateDebugMode()
-    local offset = 64
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","TITLE","ERROR",true,{10,-offset,0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","STATEMACHINE","ERROR",true,{10,-offset + (2*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","MOVEMENT","ERROR",true,{10,-offset + (3*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","INTERACTION","ERROR",true,{10,-offset + (4*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","DANCE","ERROR",true,{10,-offset + (5*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","IMPULSEMOVEMENT","NEVER GONNA GIVE YOU UP",true,{10,-offset + (6*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","WINGS","NEVER GONNA GIVE YOU UP",true,{10,-offset + (7*4),0})
-    model.DEBUG_MENU_NO_PARENT.addRenderTask("TEXT","SHIELD","NEVER GONNA GIVE YOU UP",true,{10,-offset + (8*4),0})
-    debugActionRow[1] = model.DEBUG_MENU_NO_PARENT.getRenderTask("TITLE")
-    debugActionRow[2] = model.DEBUG_MENU_NO_PARENT.getRenderTask("STATEMACHINE")
-    debugActionRow[3] = model.DEBUG_MENU_NO_PARENT.getRenderTask("MOVEMENT")
-    debugActionRow[4] = model.DEBUG_MENU_NO_PARENT.getRenderTask("INTERACTION")
-    debugActionRow[5] = model.DEBUG_MENU_NO_PARENT.getRenderTask("DANCE")
-    debugActionRow[6] = model.DEBUG_MENU_NO_PARENT.getRenderTask("IMPULSEMOVEMENT")
-    debugActionRow[7] = model.DEBUG_MENU_NO_PARENT.getRenderTask("WINGS")
-    debugActionRow[8] = model.DEBUG_MENU_NO_PARENT.getRenderTask("SHIELD")
 end
 
 function toggleChat(toggle)
     isChatOpen = toggle
     if isChatOpen then
-        animation["speechBubble_intro"].play()
-        animation["speechBubble_outro"].cease()
+        animation.switchTo("speechBubble_intro","THINKING")
     else
-        animation["speechBubble_outro"].play()
-        animation["speechBubble_intro"].cease()
+        animation.switchTo("speechBubble_outro","THINKING")
     end
     model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.H_accessory.H_speechBubble.setEnabled(isChatOpen or animation["speechBubble_outro"].isPlaying() or animation["speechBubble_intro"].isPlaying())
 end
 
+function ping.swingArm(toggle)
+    isSwingingArm = toggle
+end
+
 function tick()
-    if not p then
-        
         timeSinceLastUpdate = timeSinceLastUpdate + 1
         LDM = renderer.getCameraPos().distanceTo(player.getPos()) > LDMDistance
         
         if not LDM then
             if chat.isOpen() ~= wasChatOpen then
-                network.ping("toggleChat", chat.isOpen())
+                toggleChat(chat.isOpen())
                 wasChatOpen = isChatOpen
             end
             
@@ -675,21 +708,23 @@ function tick()
             lastVelocity = velocity
             velocity = player.getVelocity()
 
-            local localVel = {
-                x=(math.sin(math.rad(-player.getRot().y))*velocity.x)+(math.cos(math.rad(-player.getRot().y))*velocity.z),
+            localVel = {
+                x=(math.sin(math.rad(-rotation.y))*velocity.x)+(math.cos(math.rad(-rotation.y))*velocity.z),
                 0,
-                z=(math.sin(math.rad(-player.getRot().y+90))*velocity.x)+(math.cos(math.rad(-player.getRot().y+90))*velocity.z)
+                z=(math.sin(math.rad(-rotation.y+90))*velocity.x)+(math.cos(math.rad(-rotation.y+90))*velocity.z)
             }
             if debugMode then
                 model.DEBUG_MENU_NO_PARENT.MG.MG_point.setPos({localVel.z*-11,-localVel.x*11,0})
-                debugActionRow[1].setText("GNamimates Silver")
-                debugActionRow[2].setText("--== States ==--")
-                debugActionRow[3].setText("Movement: "..tostring(currentAnimation["MOVEMENT"]))
-                debugActionRow[4].setText("Interaction: "..tostring(currentAnimation["INTERACTION"]))
-                debugActionRow[5].setText("Entertainment: "..tostring(currentAnimation["DANCE"]))
-                debugActionRow[6].setText("Impulse Movement: "..tostring(currentAnimation["impuseMovement"]))
-                debugActionRow[7].setText("Wings: "..tostring(currentAnimation["WINGS"]))
-                debugActionRow[8].setText("Shield: "..tostring(currentAnimation["SHIELD"]))
+                --debugActionRow[1].setText("Movement: "..tostring(currentAnimation["MOVEMENT"]))
+                local count = countTable(currentAnimation)
+                if count ~= lastRecordedCount then
+                    lastRecordedCount = count
+                    reloadDebugMenu()
+                end
+                for key, value in pairs(debugActionRow) do
+                        model.DEBUG_MENU_NO_PARENT.getRenderTask("st"..tostring(value.index)).setText(value.value..": "..tostring(_G.currentAnimation[value.value]))
+                        model.DEBUG_MENU_NO_PARENT.getRenderTask("sts"..tostring(value.index)).setText("§0"..value.value..": "..tostring(_G.currentAnimation[value.value]))
+                end
                 model.DEBUG_MENU_NO_PARENT.MG.TimeSinceLastUpdate.setScale({1.0/timeSinceLastUpdate,1,1})
             end
 
@@ -713,44 +748,75 @@ function tick()
 
             if string.find(player.getEquipmentItem(1).getType(),"sword") then
                 isSwordOpen = true
-                model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.ARL_accessory.GNs_Blade.setEnabled(true)
+                model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.GNs_Blade.setEnabled(true)
             else
                 isSwordOpen = false
-                model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.ARL_accessory.GNs_Blade.setEnabled(false)
+                model.NO_PARENT_BASE.SCALE.ORIGIN.B.AR.ARL.GNs_Blade.setEnabled(false)
             end
             
 
             if client.isHost() then--HOST ONLY FUNCTIONS
                 distanceVelociy = (velocity*vectors.of({1,0,1})).distanceTo(vectors.of({}))
                 distanceTraveled = distanceTraveled + distanceVelociy
-
-                if player.isOnGround() then
-                    if distanceVelociy > 0.05 then
-                        if player.isSprinting() then
-                            animation.switchTo("sprint","MOVEMENT")
-                        else
-                            if player.getAnimation() == "SWIMMING" and not player.isWet() then
-                                animation.switchTo("crawling_forward","MOVEMENT")
-                            else
-                                if localVel.x > 0 then
-                                    animation.switchTo("walk_forward","MOVEMENT")
-                                else
-                                    animation.switchTo("walk_backward","MOVEMENT")
-                                end
+                local vehicle = player.getVehicle()
+                if vehicle then
+                    local vehicleType = vehicle.getType()
+                    if lastVehicleType ~= vehicleType then
+                        isAnimalSitting = false
+                        for _, value in pairs(animalSitType) do
+                            if string.find(vehicleType,value) then
+                                isAnimalSitting = true
+                                break
                             end
                         end
+                        lastVehicleType = tostring(vehicleType)
+                    end
+                    if isAnimalSitting then
+                        animation.switchTo("AnimalVehicleSit","MOVEMENT")
                     else
-                        if player.getAnimation() == "SWIMMING" and not player.isWet() then
-                            animation.switchTo("crawling_idle","MOVEMENT")
-                        else
-                            animation.switchTo("stop","MOVEMENT")
-                        end
+                        animation.switchTo("VehicleSit","MOVEMENT")
                     end
                 else
-                    if velocity.y > 0 then
-                        animation.switchTo("jump","MOVEMENT")
+                    if player.isUnderwater() then
+                        if player.getAnimation() == "SWIMMING" then
+                            animation.switchTo("swimSprint","MOVEMENT")
+                        else
+                            animation.switchTo("swimFloat","MOVEMENT")
+                        end
+                        tiltMovementStrength = 90
+                        
                     else
-                        animation.switchTo("fall","MOVEMENT")
+                        tiltMovementStrength = 0
+                        if player.isOnGround() then
+                            if distanceVelociy > 0.05 then
+                                if player.getAnimation() == "SWIMMING" and not player.isWet() then
+                                    animation.switchTo("crawling_forward","MOVEMENT")
+                                else
+                                    if player.isSprinting() then
+                                        animation.switchTo("sprint","MOVEMENT")
+                                    else
+                                        if localVel.x > 0 then
+                                            animation.switchTo("walk_forward","MOVEMENT")
+                                        else
+                                            animation.switchTo("walk_backward","MOVEMENT")
+                                        end
+                                    end
+                                end
+                                
+                            else
+                                if player.getAnimation() == "SWIMMING" and not player.isWet() then
+                                    animation.switchTo("crawling_idle","MOVEMENT")
+                                else
+                                    animation.switchTo("stop","MOVEMENT")
+                                end
+                            end
+                        else
+                            if velocity.y > 0 then
+                                animation.switchTo("jump","MOVEMENT")
+                            else
+                                animation.switchTo("fall","MOVEMENT")
+                            end
+                        end
                     end
                 end
 
@@ -763,11 +829,13 @@ function tick()
                     else
                         animation.switchTo("wings_outro","WINGS")
                     end
-
                 else
+                    if animation.wings_outro.getPlayState() == "ENDED" and not isWearingElytra then
+                        animation.switchTo("wings_hidden","WINGS")
+                    end
                     if isWearingElytra then
                         timeSinceElytra = timeSinceElytra + 1
-                        if timeSinceElytra > (size/1)*20 then
+                        if timeSinceElytra > (targetSize.y/1)*20 then
                             if velocity.distanceTo(vectors.of({})) > 0.5 then
                                 animation.switchTo("wings_throttle","WINGS")
                             else
@@ -779,15 +847,30 @@ function tick()
                 end
                 wasWearingElytra = isWearingElytra
                 end
-
-
+                local currentHeldItem = player.getHeldItem(1)
+                if currentHeldItem then
+                    if lastHeldItem ~= currentHeldItem then
+                        if currentHeldItem then
+                            heldItemTags = player.getHeldItem(1).getItemTags()
+                        end
+                        if heldItemTags then
+                            if string.find(player.getHeldItem(1).getType(),"sword") then
+                                animation.swordIdle.play()
+                            else
+                                animation.swordIdle.stop()
+                            end
+                        end
+                    end
+                end
+                lastHeldItem = player.getHeldItem(1)
                 --logTableContent(currentItemTags[1])
-                local isSwingingArm = keybind.attack.isPressed() or keybind.use.isPressed()
+                isSwingingArm = keybind.attack.isPressed() or keybind.use.isPressed()
                 if isSwingingArm ~= wasSwingingArm then
+                    ping.swingArm(isSwingingArm)
                     if isSwingingArm then
                         if player.getActiveItem() then
-                            if player.getActiveItem().getUseAction() == "EATING" then
-                                network.ping("eating","interact")
+                            if player.getActiveItem().getUseAction() == "EAT" then
+                                animation.switchTo("eating","interact")
                             end
                             if player.getActiveItem().getUseAction() == "BLOCK" then
                                 if isSwingingArm then
@@ -798,16 +881,15 @@ function tick()
                         else
                             local currentItemTags = nil
                             if player.getHeldItem(1) then
-                                currentItemTags = player.getHeldItem(1).getItemTags()
-
-                                if currentItemTags[1] then
-                                    if currentItemTags[1][1] == "fabric:pickaxes" then
+                                currentItemTags = player.getHeldItem(1).getType()
+                                if currentItemTags then
+                                    if string.find(currentItemTags,"pickaxe") then
                                         animation.switchTo("mining","interact")
                                     end
-                                    if currentItemTags[1][1] == "fabric:shovels" then
+                                    if string.find(currentItemTags,"shovel") then
                                         animation.switchTo("digging","interact")
                                     end
-                                    if currentItemTags[1][1] == "fabric:swords" then
+                                    if string.find(currentItemTags,"sword") then
                                         if velocity.y < -0.04 then
                                             animation.swordSlam.play()
                                         else
@@ -819,9 +901,6 @@ function tick()
                                 end
 
                             end
-                            --logTableContent(currentItemTags[1])
-
-
                         end
 
                     else
@@ -834,14 +913,6 @@ function tick()
                 end
                 wasSwingingArm = keybind.attack.isPressed() or keybind.use.isPressed()
             end
-
-
-
-            local localVel = {
-                x=(math.sin(math.rad(-player.getRot().y))*velocity.x)+(math.cos(math.rad(-player.getRot().y))*velocity.z),
-                0,
-                z=(math.sin(math.rad(-player.getRot().y+90))*velocity.x)+(math.cos(math.rad(-player.getRot().y+90))*velocity.z)
-            }
 
             for name, h in pairs(hair) do
                 h.lastRotation = h.rotation
@@ -867,45 +938,46 @@ function tick()
                     end
             end
         end
-    end
-    
 end
 
 function world_render(delta)
     if not LDM then
             if snapToBlocks then
-                model.NO_PARENT_BASE.SCALE.ORIGIN.setPos(vectors.of({math.floor(player.getPos(delta).x)+0.5,player.getPos().y,math.floor(player.getPos(delta).z)+0.5})*vectors.of({-16,-16,16}))
+                model.NO_PARENT_BASE.SCALE.ORIGIN.setPos(vectors.of({math.floor(player.getPos(delta).x)+0.5,player.getPos(delta).y,math.floor(player.getPos(delta).z)+0.5})*vectors.of({-16,-16,16}))
             else
                 model.NO_PARENT_BASE.SCALE.ORIGIN.setPos(player.getPos(delta)*vectors.of({-16,-16,16}))
             end
-            model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.setRot(player.getRot()*vectors.of({-1,-1,1})+vectors.of({0,player.getBodyYaw(delta)}))
-            model.DEBUG_MENU_NO_PARENT.setPos(player.getPos(delta)*vectors.of({-16,-16,16}))
-            model.DEBUG_MENU_NO_PARENT.setRot(renderer.getCameraRot()*vectors.of({1,1,1}))
+            model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.setRot(player.getRot()*vectors.of({-1,-1,1})+vectors.of({0,player.getBodyYaw()}))
+            if player.getPos(delta) then
+                model.DEBUG_MENU_NO_PARENT.setPos(player.getPos(delta)*vectors.of({-16,-16,16}))
+                model.DEBUG_MENU_NO_PARENT.setRot(renderer.getCameraRot()*vectors.of({1,1,1}))
+            end
 
         --model.NO_PARENT_BASE.SCALE.ORIGIN.B.H.setRot(player.getRot(0)*vectors.of({-1,-1,1})+vectors.of({0,player.getBodyYaw()}))
-        
-        if player.getAnimation() == "FALL_FLYING" then
+
+        if player.getAnimation() == "FALL_FLYING" or player.getAnimation() ==  "SWIMMING" then
             model.NO_PARENT_BASE.SCALE.ORIGIN.setRot(Ylookat(player.getPos(),player.getPos()+vectors.lerp(lastVelocity,velocity,delta))* vectors.of({-1,1,1}) + vectors.of({0,180,0}))
         else
-            model.NO_PARENT_BASE.SCALE.ORIGIN.setRot({0,180-player.getBodyYaw(delta)}) 
+            local playerVel = player.getVelocity()
+            model.NO_PARENT_BASE.SCALE.ORIGIN.setRot({playerVel.z*tiltMovementStrength,180-player.getBodyYaw(),playerVel.x*-tiltMovementStrength}) 
         end
         --applyColor({
-        --    vectors.hsvToRGB({t,1,1}),--HAT
-        --    vectors.hsvToRGB({t,1,1}),--HAIR
-        --    vectors.hsvToRGB({t,1,1}),--GLASSES
-        --    vectors.hsvToRGB({t,1,1}),--JACKET
-        --    vectors.hsvToRGB({t,1,1}),--SHIRT
-        --    vectors.hsvToRGB({t,1,1}),--PANTS
-        --    vectors.hsvToRGB({t,1,1}),--SHOES
-        --    vectors.hsvToRGB({t,1,1}),--RING/SHOULDERS
-        --    vectors.hsvToRGB({t,1,1}),--GLOVES
+        --    vectors.hsvToRGB({0,1,1}),--HAT
+        --    vectors.hsvToRGB({0,1,1}),--HAIR
+        --    vectors.hsvToRGB({0,1,1}),--GLASSES
+        --    vectors.hsvToRGB({0,1,1}),--JACKET
+        --    vectors.hsvToRGB({0,1,1}),--SHIRT
+        --    vectors.hsvToRGB({0,1,1}),--PANTS
+        --    vectors.hsvToRGB({0,1,1}),--SHOES
+        --    vectors.hsvToRGB({0,1,1}),--RING/SHOULDERS
+        --    vectors.hsvToRGB({0,1,1}),--GLOVES
         --})
         for name, h in pairs(hair) do
             h.model.setRot(vectors.lerp(h.lastRotation,h.rotation,delta))
         end
     end
     if client.isHost() then
-        model.NO_PARENT_BASE.SCALE.ORIGIN.setEnabled(not LDM and (player.getPos(delta)+vectors.of({0,player.getEyeHeight()*size})).distanceTo(renderer.getCameraPos()) > 0.5)
+        model.NO_PARENT_BASE.SCALE.ORIGIN.setEnabled(not LDM and (player.getPos(delta)+vectors.of({0,player.getEyeHeight()*targetSize.y})).distanceTo(renderer.getCameraPos()) > finalScale.y*0.5)
     end
     
 end
@@ -923,6 +995,14 @@ function angleToDir(direction)
         math.sin(math.rad(-direction.x)),
         math.sin(math.rad(direction.y+90))*math.cos(math.rad(direction.x))
     })
+end
+
+function countTable(table)
+    local c = 0
+    for _, _ in pairs(table) do
+        c = c + 1
+    end
+    return c
 end
 
 function getFranColor()
